@@ -5,9 +5,10 @@ import adapter from "webrtc-adapter";
 interface UserProps {
   readonly callerType: string;
   callState: string;
+  peerConnection: RTCPeerConnection | null
 }
 
-function User({ callerType, callState }: UserProps) {
+function User({ callerType, callState, peerConnection }: UserProps) {
   const video = useRef<HTMLVideoElement>(document.createElement("video"));
   const localStream = useRef() as React.MutableRefObject<MediaStream>;
 
@@ -21,15 +22,28 @@ function User({ callerType, callState }: UserProps) {
     video.current.srcObject = null;
   }
 
+  async function connectLocalStream() {
+    if (!peerConnection) { return };
+
+    localStream.current.getTracks().forEach( (track) => {
+      peerConnection.addTrack(track, localStream.current);
+    });
+  }
+
   useEffect(() => {
-    switch (callState) {
-      case "start":
-        if (callerType === "me") { start(); }
-        break;
-      case "end":
-      if (callerType === "me") { end(); }
-      break;
-    };
+    if (callerType === "me") {
+      switch (callState) {
+        case "start":
+          start()
+          break;
+        case 'connected':
+          connectLocalStream();
+          break;
+        case "end":
+          end();
+          break;
+      };
+    }
   }, [callState]);
 
   return (
